@@ -71,9 +71,9 @@ impl PID {
     ############################
      */
 
-    fn naechster_wert(&mut self, soll: Vek3, ist: Vek3) -> Vek3 {
+    fn naechster_wert(&mut self, soll: &Vek3, ist: &Vek3) -> Vek3 {
         if self.enable_flag {
-            let e_k = Vek3::sub_e(&soll, &ist);
+            let e_k = Vek3::sub_e(soll, ist);
 
             // P-Anteil
             let p = Vek3::mul_s(self.parameter.k_p, &e_k);
@@ -117,25 +117,29 @@ fn main() {
 
     let mut output: [Vek3; SIGNALLAENGE] = [Vek3::alles(0.0); SIGNALLAENGE];
 
-    pid.naechster_wert(Vek3::alles(1.0), Vek3::alles(0.0));
+    pid.naechster_wert(&Vek3::alles(1.0), &Vek3::alles(0.0));
 
-    //regelkreis(&mut pid, input, &mut output);
+    regelkreis(&mut pid, &input, &mut output);
 
     //plot(&input, &output, "Sprungantwort");
 }
 
-fn regelkreis(pid: &mut PID, input: [f32; SIGNALLAENGE], output: &mut [f32; SIGNALLAENGE]) {
-    let mut u: [f32; SIGNALLAENGE] = [0.0; SIGNALLAENGE]; // Buffer für Ausgang des PID
-    let mut ist: f32; // Buffer zur Behandliung der letzten Eingabe im Fall k==0
+fn regelkreis(pid: &mut PID, input: &[Vek3; SIGNALLAENGE], output: &mut [Vek3; SIGNALLAENGE]) {
+    let mut u: [Vek3; SIGNALLAENGE] = [Vek3::alles(0.0); SIGNALLAENGE]; // Buffer für Ausgang des PID
+    let mut ist: Vek3; // Buffer zur Behandliung der letzten Eingabe im Fall k==0
 
     // Regelkreis mit Tiefpassfilter
     for k in 0..SIGNALLAENGE {
-        ist = if k>0 { output[k-1] } else { 0.0 };
-        u[k] = pid.naechster_wert(input[k].to_owned(), ist);
+        ist = if k>0 { output[k-1] } else { Vek3::alles(0.0) };
+        u[k] = pid.naechster_wert(&input[k], &ist);
         output[k] = if k > 0 {
-            (T_ABTAST * (u[k - 1] + u[k]) - (T_ABTAST - 2.0) * output[k - 1]) / (2.0 + T_ABTAST)
+            Vek3::mul_s(1.0 / (2.0 + T_ABTAST),
+                        &Vek3::sub_e(
+                            &Vek3::mul_s(T_ABTAST,
+                                         &Vek3::add_e(&u[k - 1], &u[k])),
+                            &Vek3::mul_s(T_ABTAST - 2.0, &output[k - 1])))
         } else {
-            T_ABTAST * u[k] / (2.0 + T_ABTAST)
+            Vek3::mul_s(T_ABTAST / (2.0 + T_ABTAST), &u[k])
         }
     }
 }
