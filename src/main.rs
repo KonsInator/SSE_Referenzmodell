@@ -47,7 +47,7 @@ impl PID {
     ############################
      */
 
-    fn naechster_wert(&mut self, soll: f32, ist: f32) -> f32 {
+    fn naechster_wert(&mut self, soll: [f32; 3], ist: [f32; 3]) -> [f32;  3] {
         if self.enable_flag {
             let e_k = soll - ist;
             let p = self.parameter.k_p * e_k;                                                                                           // P-Anteil
@@ -69,7 +69,7 @@ impl PID {
 
             return p + i + d;
         } else {
-            return 0.0;
+            return [0.0; 3];
         }
     }
 }
@@ -82,14 +82,16 @@ fn main() {
     let mut pid: PID = setup_pid(T_ABTAST);
     pid.enable_flag = true;
 
-    let mut input: [f32; SIGNALLAENGE] = [1.0; SIGNALLAENGE];
-    input[0] = 0.0;
+    let mut input: [[f32; 3]; SIGNALLAENGE] = [[1.0; 3]; SIGNALLAENGE];
+    input[0] = [0.0; 3];
 
-    let mut output: [f32; SIGNALLAENGE] = [0.0; SIGNALLAENGE];
+    let mut output: [[f32; 3]; SIGNALLAENGE] = [[0.0; 3]; SIGNALLAENGE];
 
-    regelkreis(&mut pid, input, &mut output);
+    pid.naechster_wert(input[0], [0.0; 3]);
 
-    plot(&input, &output, "Sprungantwort");
+    //regelkreis(&mut pid, input, &mut output);
+
+    //plot(&input, &output, "Sprungantwort");
 }
 
 fn regelkreis(pid: &mut PID, input: [f32; SIGNALLAENGE], output: &mut [f32; SIGNALLAENGE]) {
