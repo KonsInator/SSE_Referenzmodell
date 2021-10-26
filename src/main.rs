@@ -7,23 +7,23 @@ mod vec3;
 mod pid;
 
 // Konstanten
-const SIGNALLAENGE: usize = 1000;
+const SIGNALLAENGE: usize = 100;
 const T_ABTAST: f32 = 0.05;
 
 fn main() {
     let mut pid: PID = setup_pid(T_ABTAST);
     pid.enable_flag = true;
 
-    let mut input: [Vek3; SIGNALLAENGE] = [Vek3::alles(1.0); SIGNALLAENGE];
+    let mut input: [Vek3; SIGNALLAENGE] = [Vek3(1.0, 0.0, 0.0); SIGNALLAENGE];
     input[0] = Vek3::alles(0.0);
 
     let mut output: [Vek3; SIGNALLAENGE] = [Vek3::alles(0.0); SIGNALLAENGE];
 
-    pid.naechster_wert(&Vek3::alles(1.0), &Vek3::alles(0.0));
-
     regelkreis(&mut pid, &input, &mut output);
 
-    output.iter().map(|v: &Vek3| println!("[{} {} {}]", v.0, v.1, v.2));
+    for v in &output {
+        println!("[{} {} {}]", v.0, v.1, v.2);
+    }
 
     //plot(&input, &output, "Sprungantwort");
 }
@@ -35,7 +35,7 @@ fn regelkreis(pid: &mut PID, input: &[Vek3; SIGNALLAENGE], output: &mut [Vek3; S
     // Regelkreis mit Tiefpassfilter
     for k in 0..SIGNALLAENGE {
         ist = if k>0 { output[k-1] } else { Vek3::alles(0.0) };
-        u[k] = pid.naechster_wert(&input[k], &ist);
+        u[k] = pid.anwenden(&input[k], &ist);
         output[k] = if k > 0 {
             Vek3::mul_s(1.0 / (2.0 + T_ABTAST),
                         &Vek3::sub_e(
