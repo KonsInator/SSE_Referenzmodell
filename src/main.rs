@@ -1,15 +1,6 @@
 use std::cmp::max;
 use plotters::prelude::*;
 
-struct PIDParameter {
-    k_p: f32,
-    k_i: f32,
-    k_d: f32,
-    tau: f32,   // = 1/ω mit ω als Grenzfrequenz des Tiefpasses im D-Regleranteil
-    i_max: f32, // Anti-Windup Maximalwert
-    i_min: f32  // Anti-Windup Minimalwert
-}
-
 struct Vek3(f32, f32, f32);
 
 impl Vek3 {
@@ -19,6 +10,27 @@ impl Vek3 {
     fn add_e(a: &Vek3, b: &Vek3) -> Vek3 { Vek3(a.0+b.0, a.1+b.1, a.2+b.2) }
     fn sub_e(a: &Vek3, b: &Vek3) -> Vek3 { Vek3(a.0-b.0, a.1-b.1, a.2-b.2) }
     fn mul_e(a: &Vek3, b: &Vek3) -> Vek3 { Vek3(a.0*b.0, a.1*b.1, a.2*b.2) }
+
+    // skalare Operationen
+    fn add_s(s: f32, vek: &Vek3) -> Vek3 { Vek3(s+vek.0, s+vek.1, s+vek.2) }
+    fn sub_s(s: f32, vek: &Vek3) -> Vek3 { Vek3(s-vek.0, s-vek.1, s-vek.2) }
+    fn mul_s(s: f32, vek: &Vek3) -> Vek3 { Vek3(s*vek.0, s*vek.1, s*vek.2) }
+
+    // nicht-statische Funktionen
+    fn set_min_max(&mut self, min: &Vek3, max: &Vek3) {
+        self.0 = f32::max(min.0, f32::min(max.0, self.0));
+        self.1 = f32::max(min.1, f32::min(max.1, self.1));
+        self.2 = f32::max(min.2, f32::min(max.2, self.2));
+    }
+}
+
+struct PIDParameter {
+    k_p: f32,
+    k_i: f32,
+    k_d: f32,
+    tau: f32,   // = 1/ω mit ω als Grenzfrequenz des Tiefpasses im D-Regleranteil
+    i_max: Vek3, // Anti-Windup Maximalwert
+    i_min: Vek3  // Anti-Windup Minimalwert
 }
 
 struct InternerSpeicher {
@@ -60,16 +72,12 @@ impl PID {
 
     fn naechster_wert(&mut self, soll: Vek3, ist: Vek3) -> Vek3 {
         if self.enable_flag {
-            let e_k = soll.filter;
-            let p = self.parameter.k_p * e_k;                                                                                           // P-Anteil
+            let e_k = Vek3::sub_e(&soll, &ist);
+            let p = Vek3::mul_s(self.parameter.k_p, &e_k);                                                                  // P-Anteil
 
-            let mut i = self.parameter.k_i*self.system_parameter.t_a/2.0 * (e_k + self.speicher.e_vorher) + self.speicher.i_vorher;     // I-Anteil ohne Anti-Windup
+            let mut i = Vek3::add_e(&Vek3::mul_s(self.parameter.k_i*self.system_parameter.t_a/2.0, &Vek3::add_e(&e_k, &self.speicher.e_vorher)), &self.speicher.i_vorher);     // I-Anteil ohne Anti-Windup
             // Anti-Windup
-            if i > self.parameter.i_max {
-                i = self.parameter.i_max;
-            } else if i < self.parameter.i_min {
-                i = self.parameter.i_min;
-            }
+            i.set_min_max(&self.parameter.i_min, &self.parameter.i_max);
 
             let d = 1.0/(2.0*self.parameter.tau + self.system_parameter.t_a) * (2.0*self.parameter.k_d*(e_k - self.speicher.e_vorher)
                 + (2.0*self.parameter.tau - self.system_parameter.t_a)*self.speicher.d_vorher);                                             // D-Anteil
@@ -80,7 +88,7 @@ impl PID {
 
             return p + i + d;
         } else {
-            return [0.0; 3];
+            return Vek3::alles(0.0);
         }
     }
 }
@@ -127,8 +135,8 @@ fn setup_pid(t_abtast: f32) -> PID {
         k_i: 2.0,
         k_d: 1.0,
         tau: 0.5,
-        i_max: 10.0,
-        i_min: -10.0
+        i_max: Vek3::alles(10.0),
+        i_min: Vek3::alles(-10.0)
     }, SystemParameter {
         t_a: t_abtast
     })
