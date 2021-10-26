@@ -1,6 +1,6 @@
-use std::cmp::max;
 use plotters::prelude::*;
 
+#[derive(Copy, Clone)]
 struct Vek3(f32, f32, f32);
 
 impl Vek3 {
@@ -10,6 +10,7 @@ impl Vek3 {
     fn add_e(a: &Vek3, b: &Vek3) -> Vek3 { Vek3(a.0+b.0, a.1+b.1, a.2+b.2) }
     fn sub_e(a: &Vek3, b: &Vek3) -> Vek3 { Vek3(a.0-b.0, a.1-b.1, a.2-b.2) }
     fn mul_e(a: &Vek3, b: &Vek3) -> Vek3 { Vek3(a.0*b.0, a.1*b.1, a.2*b.2) }
+    fn add3_e(a: &Vek3, b: &Vek3, c: &Vek3) -> Vek3 { Vek3(a.0+b.0+c.0, a.1+b.1+c.1, a.2+b.2+c.2) }
 
     // skalare Operationen
     fn add_s(s: f32, vek: &Vek3) -> Vek3 { Vek3(s+vek.0, s+vek.1, s+vek.2) }
@@ -73,20 +74,30 @@ impl PID {
     fn naechster_wert(&mut self, soll: Vek3, ist: Vek3) -> Vek3 {
         if self.enable_flag {
             let e_k = Vek3::sub_e(&soll, &ist);
-            let p = Vek3::mul_s(self.parameter.k_p, &e_k);                                                                  // P-Anteil
 
-            let mut i = Vek3::add_e(&Vek3::mul_s(self.parameter.k_i*self.system_parameter.t_a/2.0, &Vek3::add_e(&e_k, &self.speicher.e_vorher)), &self.speicher.i_vorher);     // I-Anteil ohne Anti-Windup
-            // Anti-Windup
-            i.set_min_max(&self.parameter.i_min, &self.parameter.i_max);
+            // P-Anteil
+            let p = Vek3::mul_s(self.parameter.k_p, &e_k);
 
-            let d = 1.0/(2.0*self.parameter.tau + self.system_parameter.t_a) * (2.0*self.parameter.k_d*(e_k - self.speicher.e_vorher)
-                + (2.0*self.parameter.tau - self.system_parameter.t_a)*self.speicher.d_vorher);                                             // D-Anteil
+            // I-Anteil
+            let mut i = Vek3::add_e(
+                &Vek3::mul_s(self.parameter.k_i*self.system_parameter.t_a/2.0,
+                             &Vek3::add_e(&e_k, &self.speicher.e_vorher)),
+                &self.speicher.i_vorher);
 
-            self.speicher.e_vorher = e_k;
-            self.speicher.i_vorher = i;
-            self.speicher.d_vorher = d;
+            i.set_min_max(&self.parameter.i_min, &self.parameter.i_max);    // Anti-Windup
 
-            return p + i + d;
+            // D-Anteil
+            let d = Vek3::mul_s(1.0/(2.0*self.parameter.tau + self.system_parameter.t_a),
+                                &Vek3::add_e(
+                                    &Vek3::add_s(2.0*self.parameter.k_d,
+                                                 &Vek3::sub_e(&e_k, &self.speicher.e_vorher)),
+                                    &Vek3::mul_s(2.0*self.parameter.tau - self.system_parameter.t_a, &self.speicher.d_vorher)));
+
+            self.speicher.e_vorher = e_k.clone();
+            self.speicher.i_vorher = i.clone();
+            self.speicher.d_vorher = d.clone();
+
+            return Vek3::add3_e(&p, &i, &d);
         } else {
             return Vek3::alles(0.0);
         }
@@ -101,18 +112,18 @@ fn main() {
     let mut pid: PID = setup_pid(T_ABTAST);
     pid.enable_flag = true;
 
-    let mut input: [Vek3; SIGNALLAENGE] = [Koord3::alles(1.0); SIGNALLAENGE];
+    let mut input: [Vek3; SIGNALLAENGE] = [Vek3::alles(1.0); SIGNALLAENGE];
     input[0] = Vek3::alles(0.0);
 
-    let mut output: [Vek3; SIGNALLAENGE] = [Koord3::alles(0.0); SIGNALLAENGE];
+    let mut output: [Vek3; SIGNALLAENGE] = [Vek3::alles(0.0); SIGNALLAENGE];
 
-    pid.naechster_wert(Koord3::alles(1.0), Koord3::alles(0.0));
+    pid.naechster_wert(Vek3::alles(1.0), Vek3::alles(0.0));
 
     //regelkreis(&mut pid, input, &mut output);
 
     //plot(&input, &output, "Sprungantwort");
 }
-
+/*
 fn regelkreis(pid: &mut PID, input: [f32; SIGNALLAENGE], output: &mut [f32; SIGNALLAENGE]) {
     let mut u: [f32; SIGNALLAENGE] = [0.0; SIGNALLAENGE]; // Buffer für Ausgang des PID
     let mut ist: f32; // Buffer zur Behandliung der letzten Eingabe im Fall k==0
@@ -128,7 +139,7 @@ fn regelkreis(pid: &mut PID, input: [f32; SIGNALLAENGE], output: &mut [f32; SIGN
         }
     }
 }
-
+*/
 fn setup_pid(t_abtast: f32) -> PID {
     PID::new(PIDParameter {
         k_p: 2.0,
