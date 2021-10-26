@@ -10,10 +10,21 @@ struct PIDParameter {
     i_min: f32  // Anti-Windup Minimalwert
 }
 
+struct Vek3(f32, f32, f32);
+
+impl Vek3 {
+    fn alles(n: f32) -> Vek3 { Vek3(n, n, n) }
+
+    // elementweise Operationen
+    fn add_e(a: &Vek3, b: &Vek3) -> Vek3 { Vek3(a.0+b.0, a.1+b.1, a.2+b.2) }
+    fn sub_e(a: &Vek3, b: &Vek3) -> Vek3 { Vek3(a.0-b.0, a.1-b.1, a.2-b.2) }
+    fn mul_e(a: &Vek3, b: &Vek3) -> Vek3 { Vek3(a.0*b.0, a.1*b.1, a.2*b.2) }
+}
+
 struct InternerSpeicher {
-    e_vorher: f32,
-    i_vorher: f32,
-    d_vorher: f32
+    e_vorher: Vek3,
+    i_vorher: Vek3,
+    d_vorher: Vek3
 }
 
 struct SystemParameter {
@@ -33,9 +44,9 @@ impl PID {
             parameter: pid_params,
             system_parameter: system_params,
             speicher: InternerSpeicher{
-                e_vorher: 0.0,
-                i_vorher: 0.0,
-                d_vorher: 0.0
+                e_vorher: Vek3::alles(0.0),
+                i_vorher: Vek3::alles(0.0),
+                d_vorher: Vek3::alles(0.0)
             },
             enable_flag: false
         }
@@ -47,9 +58,9 @@ impl PID {
     ############################
      */
 
-    fn naechster_wert(&mut self, soll: [f32; 3], ist: [f32; 3]) -> [f32;  3] {
+    fn naechster_wert(&mut self, soll: Vek3, ist: Vek3) -> Vek3 {
         if self.enable_flag {
-            let e_k = soll - ist;
+            let e_k = soll.filter;
             let p = self.parameter.k_p * e_k;                                                                                           // P-Anteil
 
             let mut i = self.parameter.k_i*self.system_parameter.t_a/2.0 * (e_k + self.speicher.e_vorher) + self.speicher.i_vorher;     // I-Anteil ohne Anti-Windup
@@ -82,12 +93,12 @@ fn main() {
     let mut pid: PID = setup_pid(T_ABTAST);
     pid.enable_flag = true;
 
-    let mut input: [[f32; 3]; SIGNALLAENGE] = [[1.0; 3]; SIGNALLAENGE];
-    input[0] = [0.0; 3];
+    let mut input: [Vek3; SIGNALLAENGE] = [Koord3::alles(1.0); SIGNALLAENGE];
+    input[0] = Vek3::alles(0.0);
 
-    let mut output: [[f32; 3]; SIGNALLAENGE] = [[0.0; 3]; SIGNALLAENGE];
+    let mut output: [Vek3; SIGNALLAENGE] = [Koord3::alles(0.0); SIGNALLAENGE];
 
-    pid.naechster_wert(input[0], [0.0; 3]);
+    pid.naechster_wert(Koord3::alles(1.0), Koord3::alles(0.0));
 
     //regelkreis(&mut pid, input, &mut output);
 
