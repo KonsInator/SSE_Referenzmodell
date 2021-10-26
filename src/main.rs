@@ -123,7 +123,7 @@ fn main() {
 
     //plot(&input, &output, "Sprungantwort");
 }
-/*
+
 fn regelkreis(pid: &mut PID, input: [f32; SIGNALLAENGE], output: &mut [f32; SIGNALLAENGE]) {
     let mut u: [f32; SIGNALLAENGE] = [0.0; SIGNALLAENGE]; // Buffer für Ausgang des PID
     let mut ist: f32; // Buffer zur Behandliung der letzten Eingabe im Fall k==0
@@ -139,7 +139,7 @@ fn regelkreis(pid: &mut PID, input: [f32; SIGNALLAENGE], output: &mut [f32; SIGN
         }
     }
 }
-*/
+
 fn setup_pid(t_abtast: f32) -> PID {
     PID::new(PIDParameter {
         k_p: 2.0,
