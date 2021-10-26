@@ -7,14 +7,14 @@ mod vec3;
 mod pid;
 
 // Konstanten
-const SIGNALLAENGE: usize = 100;
+const SIGNALLAENGE: usize = 1000;
 const T_ABTAST: f32 = 0.05;
 
 fn main() {
     let mut pid: PID = setup_pid(T_ABTAST);
     pid.enable_flag = true;
 
-    let mut input: [Vek3; SIGNALLAENGE] = [Vek3(1.0, 0.0, 0.0); SIGNALLAENGE];
+    let mut input: [Vek3; SIGNALLAENGE] = [Vek3(1.0, 1.0, 1.0); SIGNALLAENGE];
     input[0] = Vek3::alles(0.0);
 
     let mut output: [Vek3; SIGNALLAENGE] = [Vek3::alles(0.0); SIGNALLAENGE];
@@ -61,6 +61,7 @@ fn setup_pid(t_abtast: f32) -> PID {
     })
 }
 
+/*
 fn plot(input: &[f32; SIGNALLAENGE], output: &[f32; SIGNALLAENGE], name: &str) -> Result<(), Box<dyn std::error::Error>> {
     let root = SVGBackend::new("PID_PLOT.svg", (1024, 768)).into_drawing_area();
     root.fill(&WHITE)?;
@@ -89,3 +90,4 @@ fn plot(input: &[f32; SIGNALLAENGE], output: &[f32; SIGNALLAENGE], name: &str) -
 
     Ok(())
 }
+*/
