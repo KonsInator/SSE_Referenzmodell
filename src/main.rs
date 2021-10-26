@@ -121,6 +121,8 @@ fn main() {
 
     regelkreis(&mut pid, &input, &mut output);
 
+    output.iter().map(|v: &Vek3| println!("[{} {} {}]", v.0, v.1, v.2));
+
     //plot(&input, &output, "Sprungantwort");
 }
 
